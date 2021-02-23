@@ -1,0 +1,29 @@
+{
+  "name": "vue-dnd-zone",
+  "version": "0.0.1",
+  "description": "Data Driven Drag and Drop functionality for Vue.js",
+  "main": "vue-dnd-zone.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/supraniti/vue-dnd-zone.git"
+  },
+  "keywords": [
+    "drag",
+    "and",
+    "drop",
+    "vue",
+    "sortable",
+    "draggable",
+    "drag",
+    "plugin"
+  ],
+  "author": "Supraniti",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/supraniti/vue-dnd-zone/issues"
+  },
+  "homepage": "https://github.com/supraniti/vue-dnd-zone#readme"
+}
