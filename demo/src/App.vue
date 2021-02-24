@@ -58,6 +58,3 @@ export default {
   }),
 };
 </script>
-<style>
-  @import '/vue-dnd-zone/vue-dnd-zone.css';
-</style>
