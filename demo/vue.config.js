@@ -3,5 +3,5 @@ module.exports = {
     'vuetify'
   ],
 
-  publicPath: '/docs'
+  publicPath: '/vue-dnd-zone/docs'
 }
