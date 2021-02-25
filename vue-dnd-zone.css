@@ -12,13 +12,14 @@
     -moz-user-select: none !important;
     -ms-user-select: none !important;
     user-select: none !important;
+    cursor:crosshair !important;
 }
 .dnd-mirror, .dnd-mirror *{
   pointer-events:none !important;
   transition-duration:0s !important;
 }
 .dnd-mirror{
-  background:white;
+  background:transparent;
   z-index:99;
 }
 .handle{

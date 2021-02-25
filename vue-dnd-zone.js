@@ -49,10 +49,6 @@ const VueDndZone = {
         handleClass:{
           type: [Boolean,String],
           default: false
-        },
-        waitStop:{
-          type: [Number,Boolean],
-          default: false
         }
       },
       data: () => ({
@@ -60,7 +56,7 @@ const VueDndZone = {
         isDndZone:true,
         dndState: 'Idle',
         positionCache:null,
-        calc:true,
+        lockPosition:false,
         // Data Management
         dataObject:null, // Vue Observable Object
         dataObjectContainer:null, // Vue dnd-container Component
@@ -238,6 +234,7 @@ const VueDndZone = {
             this.transitions.enterContainer.updated = true
           }
           if (this.transitions.enterContainer.updated && this.transitions.leaveContainer.updated){
+            this.registeredContainers[this.transitions.enterContainer.id].saveRects()
             this.updateDataObjectContainer()
             this.dataObjectDomElement.classList.remove('dnd-move')
             let el = this.dataObjectDomElement
@@ -249,7 +246,6 @@ const VueDndZone = {
             this.animateShadow(rect)
             let containers = [this.registeredContainers[this.transitions.leaveContainer.id],this.registeredContainers[this.transitions.enterContainer.id]]
             containers.forEach(container=>{
-              container.saveRects()
               if ( (container.newRect.height !== container.oldRect.height) || (container.newRect.width !== container.oldRect.width) ){
                 container.$el.style.setProperty('transition-duration',this.transitionDuration + 's', 'important')
                 container.$el.style.setProperty('transition-property','all')
@@ -271,6 +267,14 @@ const VueDndZone = {
           }
           if (this.dndState !== 'DragTrack'){
             return
+          }
+          if (this.lockPosition){
+            let distance = Math.abs(this.event.clientX - this.cursorX) + Math.abs(this.event.clientY - this.cursorY)
+            if (distance < 100){
+              return
+            }else{
+              this.lockPosition = false
+            }
           }
           this.cursorEl = this.event.target
           this.cursorX = this.event.clientX
@@ -427,7 +431,8 @@ const VueDndZone = {
         // Add Event Listeners
         addListeners(){
           document.body.addEventListener('mousemove',this.routeEvent)
-          this.$el.addEventListener('touchmove', this.simulateMouseEvent, this.passiveCallback)
+          this.$el.addEventListener('touchmove', this.simulateMouseEvent)
+          // this.$el.addEventListener('touchmove', this.simulateMouseEvent, this.passiveCallback)
           this.$el.addEventListener('touchend', this.simulateMouseEvent)
           document.addEventListener("mouseup",() => {
               this.clear()
@@ -439,7 +444,8 @@ const VueDndZone = {
         removeListeners(){
           document.body.removeEventListener('mousemove',this.routeEvent)
           this.$el.removeEventListener('mouseup',this.routeEvent)
-          this.$el.removeEventListener('touchmove', this.simulateMouseEvent, this.passiveCallback)
+          this.$el.removeEventListener('touchmove', this.simulateMouseEvent)
+          // this.$el.removeEventListener('touchmove', this.simulateMouseEvent, this.passiveCallback)
           this.$el.removeEventListener('touchend', this.simulateMouseEvent)
         },
         // Get closest dnd-item component from vue component
@@ -511,15 +517,6 @@ const VueDndZone = {
           s.setProperty('top', rect.top + 'px')
           s.setProperty('left', rect.left + 'px')
         },
-        debounce(func, delay){
-          let inDebounce
-          return function() {
-            const context = this
-            const args = arguments
-            clearTimeout(inDebounce)
-            inDebounce = setTimeout(() => func.apply(context, args), delay)
-          }
-        }
       },
       computed:{
         // DATAOBJECT
@@ -547,16 +544,13 @@ const VueDndZone = {
         },
         // Get cursor index inside dnd-container
         cursorIndex(){
-          if (this.cursorContainer && this.cursorX && this.cursorY){
+          if (this.cursorContainer && this.cursorX && this.cursorY && !this.lockPosition){
             return this.cursorContainer.getIndex(this.cursorX,this.cursorY)
           }
           return null
         },
         // Combined value of cursor container and index
         cursorPosition(){
-          if (!this.calc){
-            return this.positionCache
-          }
           if (this.cursorContainer){
             return this.cursorContainer.dndId + '-' + this.cursorIndex
           }
@@ -573,6 +567,9 @@ const VueDndZone = {
           }
         },
         cursorPosition(newVal) {
+          if (this.lockPosition){
+            return this.positionCache
+          }
           if (newVal && this.dataObjectContainer){
             this.positionCache = newVal
             let newContainer = this.cursorContainer
@@ -602,6 +599,7 @@ const VueDndZone = {
                 })
                 this.dataObjectContainer.removeDataObject(this.dataObject)
                 newContainer.addDataObject(this.dataObject,index)
+                this.lockPosition = true
                 newContainer.nr.hasChanged = true
                 this.transitions.leaveContainer = {
                   id:this.dataObjectContainer.dndId,
@@ -635,6 +633,7 @@ const VueDndZone = {
               this.dataObjectContainer.nr.hasChanged = true
               newContainer.addDataObject(this.dataObject,this.cursorIndex)
               newContainer.nr.hasChanged = true
+              this.lockPosition = true
               this.transitions.leaveContainer = {
                 id:this.dataObjectContainer.dndId,
                 updated:false
@@ -643,12 +642,6 @@ const VueDndZone = {
                 id:newContainer.dndId,
                 updated:false
               }
-            }
-            if (this.waitStop){
-              this.calc = false
-              window.setTimeout(()=>{
-                this.calc = true
-              },this.waitStop)
             }
           }
         }
@@ -756,7 +749,7 @@ const VueDndZone = {
             for (let i=0; i < rectangles.length; i++){
               rowTop = Math.min(rowTop,rectangles[i].top)
               rowBottom = Math.max(rowBottom,rectangles[i].bottom)
-              let isLastInRow = (i === rectangles.length - 1) || (rectangles[i+1].left < rectangles[i].right)
+              let isLastInRow = (i === rectangles.length - 1) || (rectangles[i].right > rectangles[i+1].right)
               if (isLastInRow){
                 row.push( rectangles[i].right )
                 map.push([rowTop,rowBottom])
@@ -805,7 +798,6 @@ const VueDndZone = {
           if (this.dndZone){
             this.dndZone.registerContainer(this)
           }
-          // console.log(this.dndZone,this)
         },
         unregister(){
           if (this.dndZone){
@@ -877,7 +869,6 @@ const VueDndZone = {
       mounted(){
         this.itemCount = this.dndModel.length
         this.register()
-        this.saveRects()
         this.oldRect = this.$el.getBoundingClientRect()
         this.newRect = this.oldRect
       },
