@@ -26,7 +26,7 @@
       <v-list-item>
         <v-list-item-content>
           <v-list-item-title>
-            <v-icon>mdi-selection-drag</v-icon>
+            <v-icon left>mdi-drag</v-icon>
             DATA DRIVEN DND
           </v-list-item-title>
           <v-list-item-subtitle>
@@ -58,14 +58,29 @@
                     <dnd-item :key="item.id" :dnd-id="item.id" :dnd-model="item">
                       <v-col cols="12" :sm="item.cols" class="">
                         <v-card :dark="item.dark" :color="item.color">
-                          <v-card-actions>
+                          <v-card-actions class="pb-0">
                             <v-icon class="handle">mdi-drag</v-icon>
+                            <p class="title my-2" v-text="item.title"></p>
                             <v-spacer></v-spacer>
                           </v-card-actions>
                           <v-card-text class="body-1 pt-0" style="opacity:1">
-                            <p class="title my-2" v-text="item.title"></p>
                             <p class="my-2" v-for="(p,i) in item.text" :key="i" v-text="p"></p>
                             <div v-for="(p,i) in item.html" :key="i" v-html="p"></div>
+                            <div v-if="item.custom">
+                              <pre>
+  <code style="display: block;white-space: pre-wrap">
+    &lt;dnd-zone>
+      &lt;dnd-container>
+        &lt;dnd-item>
+          &lt;!-- item markup goes here -->
+        &lt;/dnd-item>
+      &lt;/dnd-container>
+    &lt;/dnd-zone>
+
+  </code>
+                              </pre>
+                              <v-btn text small>Examples</v-btn>
+                            </div>
                           </v-card-text>
                         </v-card>
                       </v-col>
@@ -74,27 +89,22 @@
                 </dnd-container>
               </v-card-text>
             </dnd-zone>
-            <v-card-actions>
-              Next
-            </v-card-actions>
           </v-card>
         </v-tab-item>
         <v-tab-item>
-          <HelloWorld/>
+          <Examples/>
         </v-tab-item>
       </v-tabs-items>
     </v-main>
   </v-app>
 </template>
-
 <script>
-import HelloWorld from './components/HelloWorld';
+import Examples from './components/Examples';
 
 export default {
   name: 'App',
-
   components: {
-    HelloWorld,
+    Examples,
   },
 
   data: () => ({
@@ -104,53 +114,45 @@ export default {
       children:[
         {
           id:0,
-          color:'black',
+          color:'grey darken-3',
           dark:true,
-          cols:4,
-          title:'vue-dnd-zone',
+          cols:5,
+          title:'About',
           text:['vue-dnd-zone is a vue.js plugin for drag and drop functionality.',
-          'Unlike most plugins, it is not a wrapper for an external js library, but a set of three vue components managing the drag and drop event.']
+          'It is not a wrapper for an external js library, but a set of vue components managing the drag and drop event and data model state.']
         },
         {
           id:1,
-          color:'white',
-          dark:false,
-          cols:4,
-          title:'Motivation',
-          text:['Having the drag and drop functionality within vue, makes it possible to utilize vue core features such as computed properties & transition groups for the event and animation management for better performance, and exposing a developer friendly API (component props)']
+          color:'grey darken-3',
+          dark:true,
+          cols:5,
+          title:'Features',
+          text:['- Smooth transitions',' - Auto scroll while dragging', '- Supports nested structures','- Lightweight (~4kb gzipped)','- Supports touch events']
         },
         {
           id:2,
-          color:'black',
-          dark:true,
+          color:'grey lighten-5',
+          dark:false,
           cols:4,
-          title:'Main Features',
-          text:['- Supports nested structures','- Smooth transitions','- Scroll while dragging','- Lightweight (~4kb gzipped) With no dependencies']
+          title:'Installation',
+          html:[`<kbd>npm install vue-dnd-zone</kbd><br/><br/><code style="display: block;white-space: pre-wrap">//main.js<br/>import VueDndZone from 'vue-dnd-zone'<br/>import 'vue-dnd-zone/vue-dnd-zone.css'</code>`]
         },
         {
           id:3,
-          color:'white',
+          color:'grey lighten-5',
           dark:false,
           cols:4,
-          title:'Installation',
-          html:[`<kbd>npm install vue-dnd-zone</kbd><p class="mt-2 mb-0 caption">main.js</p><code>import VueDndZone from 'vue-dnd-zone'` + `<br/>` +  `import 'vue-dnd-zone/vue-dnd-zone.css'</code>`]
+          title:'Usage',
+          custom:true
         },
         {
           id:4,
-          color:'white',
-          dark:false,
+          color:'deep-purple darken-3',
+          dark:true,
           cols:4,
-          title:'Installation',
-          html:[`<kbd>npm install vue-dnd-zone</kbd><p class="mt-2 mb-0 caption">main.js</p><code>import VueDndZone from 'vue-dnd-zone'` + `<br/>` +  `import 'vue-dnd-zone/vue-dnd-zone.css'</code>`]
+          title:'Project Status',
+          html:['vue-dnd-zone is currently in a POC (proof of concept) state.','If you want to support its progress, star the <a href="https://github.com/supraniti/vue-dnd-zone" target="_blank" class="white--text">repository</a> on github.']
         },
-        {
-          id:5,
-          color:'white',
-          dark:false,
-          cols:4,
-          title:'Installation',
-          html:[`<kbd>npm install vue-dnd-zone</kbd><p class="mt-2 mb-0 caption">main.js</p><code>import VueDndZone from 'vue-dnd-zone'` + `<br/>` +  `import 'vue-dnd-zone/vue-dnd-zone.css'</code>`]
-        }
       ]
     }
     //
