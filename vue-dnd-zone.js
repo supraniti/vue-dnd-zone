@@ -246,7 +246,7 @@ const VueDndZone = {
             containers.forEach(container=>{
               if ( (container.newRect.height !== container.oldRect.height) || (container.newRect.width !== container.oldRect.width) ){
                 container.$el.style.setProperty('transition-duration',this.transitionDuration + 's', 'important')
-                container.$el.style.setProperty('transition-property','all')
+                container.$el.style.setProperty('transition-property','all','important')
                 container.setRect(container.oldRect)
                 Vue.nextTick(()=>{
                   container.setRect(container.newRect)
@@ -335,6 +335,7 @@ const VueDndZone = {
             let container = this.registeredContainers[key]
             container.nr.hasChanged = false
             container.$el.style.removeProperty('transition-duration')
+            container.$el.style.removeProperty('transition-property')
             container.unsetRect()
           })
         },
@@ -880,6 +881,7 @@ const VueDndZone = {
       },
       beforeDestroy(){
         this.$el.style.removeProperty('transition-duration')
+        this.$el.style.removeProperty('transition-property')
         this.unsetRect()
       }
     })
