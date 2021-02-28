@@ -182,7 +182,6 @@ const VueDndZone = {
             this.shadowAnchor().append(this.shadow)
           }else if(rect){
             this.setRect(this.shadow,rect)
-            // this.$el.classList.remove('dnd-notransition')
           }
         },
         animateMirror(rect,source){
