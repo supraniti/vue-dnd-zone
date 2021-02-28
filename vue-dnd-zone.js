@@ -142,7 +142,6 @@ const VueDndZone = {
                 let nestable = this.getContainer(draggable)
                 if (draggable && nestable){
                   this.dataObject = draggable.dndModel
-                  // console.log(this.dataObject)
                   this.updateDataObjectContainer()
                   this.addListeners()
                   this.$el.classList.add('dnd-zone')
@@ -318,12 +317,9 @@ const VueDndZone = {
           }
         },
         setIdleState(){
-          // console.log('setidlestate')
           this.dndState = 'Idle'
           this.shadow.parentElement.removeChild(this.shadow)
           this.mirror.parentElement.parentElement.removeChild(this.mirror.parentElement)
-          // this.shadowAnchor().removeChild(this.shadow)
-          // this.mirrorAnchor().removeChild(this.mirror.parentElement)
           this.activeScroll = null
           this.dataObject = null
           this.dataObjectContainer = null
@@ -349,7 +345,6 @@ const VueDndZone = {
           delete(this.registeredContainers[vnode.dndId])
         },
         updateDataObjectContainer(){
-          // console.log('updateDataObjectContainer')
           let keys = Object.keys(this.registeredContainers)
           for (let i=0;i<keys.length;i++){
             let container = this.registeredContainers[keys[i]]
@@ -497,7 +492,6 @@ const VueDndZone = {
         },
         // Check if a dnd-container is a contained by a data object or its decendants
         isSubset(dataObjectContainer,dataObject){
-          // console.log(dataObjectContainer,dataObject)
           if ( dataObject.children && dataObject.children.length > 0 ){
             if ( dataObjectContainer !== dataObject.children ){
               return Object.keys(dataObject.children).some( key=>{
@@ -912,12 +906,6 @@ const VueDndZone = {
       },
       render: function () {
         return this.$slots.default
-      },
-      mounted(){
-        // console.log('mounted',this.$el,this.$el.getBoundingClientRect())
-      },
-      updated(){
-        // console.log('updated',this.$el)
       }
     })
   }
