@@ -22,6 +22,10 @@ const VueDndZone = {
           type: Number,
           default: 150,
         },
+        lockDistance:{
+          type: Number,
+          default: 25,
+        },
         shadowAnchor:{
           type: Function,
           default: function(){
@@ -38,6 +42,18 @@ const VueDndZone = {
           type: Number,
           default: 0.2,
         },
+        shadowOpacity:{
+          type: Number,
+          default: 0.5,
+        },
+        shadowMargin:{
+          type: [Boolean, String],
+          default: '0px',
+        },
+        shadowPadding:{
+          type: [Boolean, String],
+          default: false,
+        },
         dragstartBuffer: {
           type: Number,
           default: 50,
@@ -48,6 +64,10 @@ const VueDndZone = {
         },
         handleClass:{
           type: [Boolean,String],
+          default: false
+        },
+        pushToLast:{
+          type: Boolean,
           default: false
         }
       },
@@ -99,6 +119,12 @@ const VueDndZone = {
             right: null
         },
         activeScroll:false,
+        shadowPos:{
+          top:0,
+          left:0,
+          pageXOffset:0,
+          pageYOffset:0
+        }
       }),
       methods:{
         // Event Management
@@ -116,7 +142,7 @@ const VueDndZone = {
               let scrollState = this.canScroll()
               for (let direction in scrollState) {
                   if ((scrollState[direction]) && (!this.scrollInvoked[direction])) {
-                      this.scroll(direction);
+                      this.scroll(direction)
                   }
               }
             }
@@ -143,6 +169,7 @@ const VueDndZone = {
                 if (draggable && nestable){
                   this.dataObject = draggable.dndModel
                   this.updateDataObjectContainer()
+                  this.dataObjectContainer.$children[0].$vnode.componentInstance._hasMove = true
                   this.addListeners()
                   this.$el.classList.add('dnd-zone')
                   document.documentElement.style.setProperty('--dnd-transition-duration', this.transitionDuration + 's')
@@ -156,6 +183,7 @@ const VueDndZone = {
                   Object.keys(this.registeredContainers).forEach(key=>{
                     this.registeredContainers[key].saveRects()
                   })
+                  this.dataObjectDomElement.classList.add('dnd-dragged')
                   clearInterval(this.intervalID)
                   this.intervalID = window.setInterval(this.track, this.calcInterval)
                   this.dndState = 'DragTrack'
@@ -169,14 +197,16 @@ const VueDndZone = {
         animateShadow(rect,source){
           if (!this.shadow && rect && source){
             this.shadow = source.cloneNode(true)
-            let s = this.shadow.style
-            s.setProperty('position', 'fixed', 'important')
-            s.setProperty('opacity', '0.5', 'important')
-            s.setProperty('margin', '0', 'important')
-            s.setProperty('visibility', 'visible', 'important')
-            s.setProperty('pointer-events', 'none', 'important')
-            s.setProperty('transition-duration', this.transitionDuration + 's', 'important')
-            s.setProperty('transition-property', 'all', 'important')
+            this.shadow.classList.add('dnd-shadow')
+            if (this.shadowOpacity){
+              this.shadow.style.setProperty('opacity', this.shadowOpacity, 'important')
+            }
+            if (this.shadowMargin){
+              this.shadow.style.setProperty('margin', this.shadowMargin, 'important')
+            }
+            if (this.shadowPadding){
+              this.shadow.style.setProperty('padding', this.shadowPadding, 'important')
+            }
             this.setRect(this.shadow,rect)
             this.shadowAnchor().append(this.shadow)
           }else if(rect){
@@ -211,7 +241,9 @@ const VueDndZone = {
             mirror.style.setProperty('width', rect.width + 'px', 'important')
             mirror.style.setProperty('height', rect.height + 'px', 'important')
             mirror.style.setProperty('pointer-events', 'none', 'important')
+            mirror.style.setProperty('visibility', 'visible', 'important')
             mirrorWrapper.style.setProperty('padding', '0', 'important')
+            mirrorWrapper.style.setProperty('visibility', 'hidden', 'important')
             mirrorWrapper.style.setProperty('position', 'fixed', 'important')
             mirrorWrapper.style.setProperty('pointer-events', 'none', 'important')
             mirrorWrapper.style.setProperty('width', '0px', 'important')
@@ -234,28 +266,32 @@ const VueDndZone = {
           if (this.transitions.enterContainer.updated && this.transitions.leaveContainer.updated){
             this.registeredContainers[this.transitions.enterContainer.id].saveRects()
             this.updateDataObjectContainer()
-            this.dataObjectDomElement.classList.remove('dnd-move')
             let el = this.dataObjectDomElement
             while (el && el !== this.$el){
               el.classList.remove('dnd-move')
               el = el.parentElement
             }
             let rect = this.dataObjectDomElement.getBoundingClientRect()
-            this.animateShadow(rect)
-            let containers = [this.registeredContainers[this.transitions.leaveContainer.id],this.registeredContainers[this.transitions.enterContainer.id]]
-            containers.forEach(container=>{
-              if ( (container.newRect.height !== container.oldRect.height) || (container.newRect.width !== container.oldRect.width) ){
-                container.$el.style.setProperty('transition-duration',this.transitionDuration + 's', 'important')
-                container.$el.style.setProperty('transition-property','all','important')
-                container.setRect(container.oldRect)
-                Vue.nextTick(()=>{
-                  container.setRect(container.newRect)
-                })
-                container.$el.addEventListener('transitionend',()=>{
-                  container.$el.style.setProperty('transition-duration','0s')
-                  container.unsetRect()
-                },{once:true})
-              }
+            this.dataObjectDomElement.classList.add('dnd-dragged')
+            window.requestAnimationFrame(()=>{
+              this.animateShadow(rect)
+            })
+            this.animateContainer(this.registeredContainers[this.transitions.enterContainer.id])
+            if ( this.transitions.enterContainer.id !== this.transitions.leaveContainer.id){
+              this.animateContainer(this.registeredContainers[this.transitions.leaveContainer.id])
+            }
+          }
+        },
+        animateContainer(container){
+          if ( (container.newRect.height !== container.oldRect.height) || (container.newRect.width !== container.oldRect.width) ){
+            container.setRect(container.oldRect)
+            window.requestAnimationFrame(()=>{
+              container.setRect(container.newRect)
+              container.$el.classList.add('dnd-transition')
+              container.$el.addEventListener('transitionend',()=>{
+                container.$el.classList.remove('dnd-transition')
+                container.unsetRect()
+              },{once:true})
             })
           }
         },
@@ -268,7 +304,7 @@ const VueDndZone = {
           }
           if (this.lockPosition){
             let distance = Math.abs(this.event.clientX - this.cursorX) + Math.abs(this.event.clientY - this.cursorY)
-            if (distance < 100){
+            if (distance < this.lockDistance){
               return
             }else{
               this.lockPosition = false
@@ -282,11 +318,12 @@ const VueDndZone = {
           if (this.dndState !== 'Idle'){
             this.removeListeners()
             this.$el.classList.remove('dnd-zone')
-            let mirrorRect = this.mirror.getBoundingClientRect()
+            document.documentElement.style.removeProperty('--dnd-transition-duration')
             if (!this.dataObjectDomElement){
               this.setIdleState()
               return
             }
+            let mirrorRect = this.mirror.getBoundingClientRect()
             this.dataObjectDomElement.classList.remove('dnd-move')
             let finalRect = this.dataObjectDomElement.getBoundingClientRect()
             let offset = Math.abs(mirrorRect.top - finalRect.top) + Math.abs(mirrorRect.left - finalRect.left) +
@@ -318,8 +355,15 @@ const VueDndZone = {
         },
         setIdleState(){
           this.dndState = 'Idle'
-          this.shadow.parentElement.removeChild(this.shadow)
-          this.mirror.parentElement.parentElement.removeChild(this.mirror.parentElement)
+          if (this.shadow){
+            this.shadow.parentElement.removeChild(this.shadow)
+          }
+          if (this.mirror){
+            this.mirror.parentElement.parentElement.removeChild(this.mirror.parentElement)
+          }
+          if (this.dataObjectDomElement){
+            this.dataObjectDomElement.classList.remove('dnd-dragged')
+          }
           this.activeScroll = null
           this.dataObject = null
           this.dataObjectContainer = null
@@ -334,8 +378,7 @@ const VueDndZone = {
           Object.keys(this.registeredContainers).forEach(key=>{
             let container = this.registeredContainers[key]
             container.nr.hasChanged = false
-            container.$el.style.removeProperty('transition-duration')
-            container.$el.style.removeProperty('transition-property')
+            container.$el.classList.remove('dnd-transition')
             container.unsetRect()
           })
         },
@@ -361,21 +404,25 @@ const VueDndZone = {
           this.scrollInvoked[direction] = window.setInterval(function () {
               switch (direction) {
                   case "top":
-                      window.scrollTo(window.pageXOffset, window.pageYOffset - this.scrollSpeed(this.event,document.documentElement));
+                      window.scrollTo(window.pageXOffset, window.pageYOffset - this.scrollSpeed(this.event,document.documentElement))
                       break;
                   case "left":
-                      window.scrollTo(window.pageXOffset - this.scrollSpeed(this.event,document.documentElement), window.pageYOffset);
+                      window.scrollTo(window.pageXOffset - this.scrollSpeed(this.event,document.documentElement), window.pageYOffset)
                       break;
                   case "bottom":
-                      window.scrollTo(window.pageXOffset, window.pageYOffset + this.scrollSpeed(this.event,document.documentElement));
+                      window.scrollTo(window.pageXOffset, window.pageYOffset + this.scrollSpeed(this.event,document.documentElement))
                       break;
-                  case"right":
-                      window.scrollTo(window.pageXOffset + this.scrollSpeed(this.event,document.documentElement), window.pageYOffset);
-                      break;
+                  case "right":
+                      window.scrollTo(window.pageXOffset + this.scrollSpeed(this.event,document.documentElement), window.pageYOffset)
+                      break
               }
+              // this.shadow.style.setProperty('left',(this.shadowPos.x + window.pageXOffset) + 'px')
+              this.shadow.style.setProperty('transition-duration','0s','important')
+              this.shadow.style.setProperty('top',(this.shadowPos.top + this.shadowPos.pageYOffset - window.pageYOffset) + 'px')
               if ((!this.canScroll()[direction]) || (!this.activeScroll)) {
                   clearInterval(this.scrollInvoked[direction])
                   this.scrollInvoked[direction] = null
+                  this.dataObjectContainer.saveRects()
               }
           }.bind(this), 16)
         },
@@ -399,8 +446,25 @@ const VueDndZone = {
         },
         // Convert touch events to mouse events
         simulateMouseEvent(e){
-          e.preventDefault()
-          e.stopPropagation()
+          if(e.type === 'touchstart'){
+            e.target.addEventListener('touchmove', this.simulateMouseEvent)
+            e.target.addEventListener('touchend', this.simulateMouseEvent)
+          }
+          if(e.type === 'touchend' && this.dndState === 'DragTrack'){
+            e.preventDefault()
+            e.stopPropagation()
+          }
+          if(e.type === 'touchend'){
+            this.clear()
+            return
+          }
+          if(e.type === 'touchmove' && this.dndState === 'DragTrack'){
+            e.preventDefault()
+            e.stopPropagation()
+          }
+          if(e.type === 'touchmove' && this.dndState === 'DragStartBuffer'){
+            this.setIdleState()
+          }
           if (e.touches.length > 1) {
             return false
           }
@@ -426,9 +490,6 @@ const VueDndZone = {
         // Add Event Listeners
         addListeners(){
           document.body.addEventListener('mousemove',this.routeEvent)
-          this.$el.addEventListener('touchmove', this.simulateMouseEvent)
-          // this.$el.addEventListener('touchmove', this.simulateMouseEvent, this.passiveCallback)
-          this.$el.addEventListener('touchend', this.simulateMouseEvent)
           document.addEventListener("mouseup",() => {
               this.clear()
             },
@@ -439,9 +500,6 @@ const VueDndZone = {
         removeListeners(){
           document.body.removeEventListener('mousemove',this.routeEvent)
           this.$el.removeEventListener('mouseup',this.routeEvent)
-          this.$el.removeEventListener('touchmove', this.simulateMouseEvent)
-          // this.$el.removeEventListener('touchmove', this.simulateMouseEvent, this.passiveCallback)
-          this.$el.removeEventListener('touchend', this.simulateMouseEvent)
         },
         // Get closest dnd-item component from vue component
         getItem(component){
@@ -504,8 +562,11 @@ const VueDndZone = {
         },
         // Set width, height, top, left properties on a DOM element
         setRect(el,rect){
-          // this.shadowCache = rect
           let s = el.style
+          this.shadowPos.left = rect.left
+          this.shadowPos.top = rect.top
+          this.shadowPos.pageXOffset = window.pageXOffset
+          this.shadowPos.pageYOffset = window.pageYOffset
           s.setProperty('width', rect.width + 'px')
           s.setProperty('height', rect.height + 'px')
           s.setProperty('top', rect.top + 'px')
@@ -552,14 +613,6 @@ const VueDndZone = {
         },
       },
       watch: {
-        dataObjectDomElement(newVal,oldVal){
-          if (newVal){
-            newVal.style.setProperty('visibility', 'hidden', 'important')
-          }
-          if (oldVal){
-            oldVal.style.removeProperty('visibility')
-          }
-        },
         cursorPosition(newVal) {
           if (this.lockPosition){
             return this.positionCache
@@ -625,7 +678,7 @@ const VueDndZone = {
               })
               this.dataObjectContainer.removeDataObject(this.dataObject)
               this.dataObjectContainer.nr.hasChanged = true
-              newContainer.addDataObject(this.dataObject,this.cursorIndex)
+              newContainer.addDataObject(this.dataObject,this.cursorIndex,this.pushToLast)
               newContainer.nr.hasChanged = true
               this.lockPosition = true
               this.transitions.leaveContainer = {
@@ -672,6 +725,12 @@ const VueDndZone = {
             return []
           },
         },
+        containerTransfer:{
+          type: Object,
+          default: function(){
+            return {}
+          }
+        },
         verticalSearch: {
           type: Boolean,
           default: false,
@@ -706,12 +765,15 @@ const VueDndZone = {
       },
       methods:{
         // Data Management
-        addDataObject(dataObject,index){
+        addDataObject(dataObject,index,edge){
           if (this.dndModel.length === 0){
             this.dndModel.push(dataObject)
           }else if ( index > this.dndModel.length - 1 ){
             this.dndModel.push(dataObject)
-          }else{
+          }else if ( edge ){
+            this.dndModel.push(dataObject)
+          }
+          else{
             this.dndModel.splice(index,0,dataObject)
           }
         },
@@ -765,10 +827,6 @@ const VueDndZone = {
           }
         },
         getIndex(x,y){
-          // let rectangleMap = this.getRectangleMap([...this.$el.children]
-          //   .map(child=>this.getValidItem(child))
-          //   .filter(child=>child)
-          //   .map(child=>child.$el.getBoundingClientRect()))
           let rectangleMap = this.getRectangleMap(this.nr.rects)
           if (this.verticalSearch){
             return this.binarySearch(rectangleMap.map,y)
@@ -867,8 +925,8 @@ const VueDndZone = {
         this.newRect = this.oldRect
       },
       beforeUpdate(){
-        this.unsetRect()
         if (this.nr.hasChanged){
+          this.unsetRect()
           this.oldRect = this.$el.getBoundingClientRect()
         }
       },
@@ -880,8 +938,6 @@ const VueDndZone = {
         }
       },
       beforeDestroy(){
-        this.$el.style.removeProperty('transition-duration')
-        this.$el.style.removeProperty('transition-property')
         this.unsetRect()
       }
     })
