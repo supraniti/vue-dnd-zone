@@ -148,6 +148,57 @@ const VueDndZone = {
             }
           }
         },
+        // React to touch events
+        routeTouchEvent(e){
+          if (e.touches.length > 1) {
+            return false
+          }
+          if(e.type === 'touchend' && this.dndState === 'DragTrack'){
+            e.preventDefault()
+            e.stopPropagation()
+          }
+          if (e.type === 'touchend' || e.touches.length > 1){
+            e.target.removeEventListener('touchmove', this.routeTouchEvent)
+            e.target.removeEventListener('touchend', this.routeTouchEvent)
+            this.clear()
+          }else if (e.type === 'touchstart'){
+            e.target.addEventListener('touchmove', this.routeTouchEvent)
+            e.target.addEventListener('touchend', this.routeTouchEvent)
+            this.setTouchEvent(e)
+            this.init(e)
+          }else if(e.type === 'touchmove'){
+            if(this.dndState === 'DragTrack'){
+              e.preventDefault()
+              e.stopPropagation()
+              this.setTouchEvent(e)
+              this.animateMirror()
+              if (!this.nativeScroll){
+                let scrollState = this.canScroll()
+                for (let direction in scrollState) {
+                    if ((scrollState[direction]) && (!this.scrollInvoked[direction])) {
+                        this.scroll(direction)
+                    }
+                }
+              }
+            }
+            if(this.dndState === 'DragStartBuffer'){
+              this.setIdleState()
+            }
+          }
+        },
+        setTouchEvent(e){
+          let screenX = e.touches[0] ? e.touches[0].screenX : 0
+          let screenY = e.touches[0] ? e.touches[0].screenY : 0
+          let clientX = e.touches[0] ? e.touches[0].clientX : 0
+          let clientY = e.touches[0] ? e.touches[0].clientY : 0
+          this.event = {
+            screenX: screenX,
+            screenY: screenY,
+            clientX: clientX,
+            clientY: clientY,
+            target:(e.type === 'touchmove') ? document.elementFromPoint(clientX, clientY) || document.body : e.target
+          }
+        },
         // Start DND Event
         init(e){
           if (this.dndState === 'Idle'){
@@ -416,11 +467,11 @@ const VueDndZone = {
                       window.scrollTo(window.pageXOffset + this.scrollSpeed(this.event,document.documentElement), window.pageYOffset)
                       break
               }
-              // this.shadow.style.setProperty('left',(this.shadowPos.x + window.pageXOffset) + 'px')
               this.shadow.style.setProperty('transition-duration','0s','important')
               this.shadow.style.setProperty('top',(this.shadowPos.top + this.shadowPos.pageYOffset - window.pageYOffset) + 'px')
               if ((!this.canScroll()[direction]) || (!this.activeScroll)) {
                   clearInterval(this.scrollInvoked[direction])
+                  this.shadow.style.removeProperty('transition-duration')
                   this.scrollInvoked[direction] = null
                   this.dataObjectContainer.saveRects()
               }
@@ -694,14 +745,15 @@ const VueDndZone = {
         }
       },
       mounted(){
+        document.documentElement.style.setProperty('--dnd-transition-duration', this.transitionDuration + 's')
         this.$el.addEventListener('mousedown',this.routeEvent)
-        this.$el.addEventListener('touchstart', this.simulateMouseEvent)
+        this.$el.addEventListener('touchstart', this.routeTouchEvent)
         this.$el.addEventListener('drag', this.muteEvent, false)
         this.$el.addEventListener('dragstart', this.muteEvent, false)
       },
       beforeDestroy(){
         this.$el.removeEventListener('mousedown',this.routeEvent)
-        this.$el.removeEventListener('touchstart', this.simulateMouseEvent)
+        this.$el.removeEventListener('touchstart', this.routeTouchEvent)
         this.$el.removeEventListener('drag', this.muteEvent, false)
         this.$el.removeEventListener('dragstart', this.muteEvent, false)
       },

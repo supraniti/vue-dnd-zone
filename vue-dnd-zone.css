@@ -30,19 +30,16 @@
   visibility:hidden !important;
   transition:all 0s !important;
 }
-.dnd-zone .dnd-move{
+.dnd-move{
   transition: var(--dnd-transition-duration);
 }
 .dndZone .dnd-enter-active, .dnd-zone .dnd-leave-active {
   transition:all 0s !important;
   visibility:hidden !important;
 }
-.dnd-move{
-  transition:all 0.2s;
-}
 .dnd-enter-active, .dnd-leave-active {
   opacity:1;
-  transition:all 0.2s;
+  transition: all var(--dnd-transition-duration);
 }
 .dnd-enter, .dnd-leave{
   opacity:0;
