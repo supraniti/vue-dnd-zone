@@ -1,6 +1,6 @@
 {
   "name": "vue-dnd-zone",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Data Driven Drag and Drop functionality for Vue.js",
   "main": "vue-dnd-zone.js",
   "scripts": {
